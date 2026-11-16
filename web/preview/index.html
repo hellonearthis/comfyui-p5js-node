@@ -52,7 +52,7 @@
     showError(event.message || "Unknown error");
   });
 
-  window.__p5RunSketch = (srcCode) => {
+  window.__p5RunSketch = (srcCode, totalFrames) => {
     clearError();
     if (window.__p5Instance && typeof window.__p5Instance.remove === "function") {
       window.__p5Instance.remove();
@@ -61,6 +61,7 @@
     window.setup = undefined;
     window.draw = undefined;
     window.preload = undefined;
+    window.COMFY_FRAME_COUNT = Number(totalFrames) > 0 ? Number(totalFrames) : 1;
 
     try {
       window.eval(String(srcCode || ""));

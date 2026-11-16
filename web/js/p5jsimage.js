@@ -150,9 +150,9 @@ function waitForCanvas(iframe, timeoutMs) {
   });
 }
 
-async function runSketchInIframe(iframe, srcCode) {
+async function runSketchInIframe(iframe, srcCode, frameCount) {
   await waitForIframeReady(iframe, CANVAS_WAIT_TIMEOUT_MS);
-  iframe.contentWindow.__p5RunSketch(srcCode);
+  iframe.contentWindow.__p5RunSketch(srcCode, clampFrameCount(frameCount));
   return waitForCanvas(iframe, CANVAS_WAIT_TIMEOUT_MS);
 }
 
@@ -169,7 +169,7 @@ function canvasToPngBlob(canvas) {
 }
 
 async function captureFrameSequence(iframe, scriptText, frameCount) {
-  const canvas = await runSketchInIframe(iframe, scriptText);
+  const canvas = await runSketchInIframe(iframe, scriptText, frameCount);
   const batchId = Date.now();
 
   const captureOne = async (frameIndex) => {
@@ -199,7 +199,7 @@ async function captureAndUploadCanvas(iframe, getScriptText, getFrameCount) {
   }
 
   const existingCanvas = findSketchCanvas(iframe);
-  const canvas = existingCanvas || (await runSketchInIframe(iframe, getScriptText()));
+  const canvas = existingCanvas || (await runSketchInIframe(iframe, getScriptText(), frameCount));
   const blob = await canvasToPngBlob(canvas);
   const imageFilename = `${Date.now()}.png`;
   const file = new File([blob], imageFilename, { type: "image/png" });
@@ -229,7 +229,7 @@ function createP5jsWidget(node, inputName) {
           if (scriptWidget) {
             scriptWidget.value = script;
           }
-          return runSketchInIframe(iframe, script);
+          return runSketchInIframe(iframe, script, getFrameCount());
         })
         .catch((err) => console.error("[comfyui-p5js-node]", err));
     },
@@ -266,7 +266,7 @@ function createP5jsWidget(node, inputName) {
   savePresetButton.serializeValue = () => undefined;
 
   const runButton = node.addWidget("button", "Run Sketch", "run_p5js_sketch", () => {
-    runSketchInIframe(iframe, getScriptText()).catch((err) => {
+    runSketchInIframe(iframe, getScriptText(), getFrameCount()).catch((err) => {
       console.error("[comfyui-p5js-node]", err);
     });
   });

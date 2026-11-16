@@ -52,10 +52,18 @@ function draw() {
 
 > **Tip:** If you forget to click **Run Sketch** before clicking **Queue Prompt**, the node automatically runs your current `script` and waits for the canvas before queuing.
 
-### 3. Capture an animation batch
-1. Write a sketch that uses `frameCount` (like the `animated_wave.js` preset).
-2. Set **`frame_count`** to the number of frames you want (e.g. `24`).
-3. Click **Queue Prompt**. The node steps through the sketch frame-by-frame and outputs a `[B, H, W, C]` image batch and `[B, H, W]` mask batch ready for video nodes (`CreateVideo` / `SaveVideo` / ControlNet / AnimateDiff).
+### 3. Capture an animation batch (including seamless loops)
+1. Write a sketch that uses `frameCount` (or pick a looping preset like `loop_orbiting_rings.js`, `loop_hypnotic_tunnel.js`, or `loop_lissajous_ribbon.js`).
+2. Set **`frame_count`** to the number of frames you want (e.g. `48`).
+3. Click **Queue Prompt**. The node steps through the sketch frame-by-frame and outputs a `[B, H, W, C]` image batch and `[B, H, W]` mask batch ready for video nodes (`CreateVideo` / `SaveVideo` / MiniMax H3 `ref_video`).
+
+> **Seamless Loop Tip:** The preview frame exposes `window.COMFY_FRAME_COUNT` (set to your node's `frame_count` value). Compute normalized loop progress as:
+> ```javascript
+> const totalFrames = Math.max(2, window.COMFY_FRAME_COUNT || 48);
+> const t = ((frameCount - 1) % totalFrames) / totalFrames; // 0.0 -> <1.0
+> const angle = t * TWO_PI;
+> ```
+> When `t` completes a full `TWO_PI` cycle over `totalFrames`, the last frame transitions seamlessly back to frame 1.
 
 ### 4. Connect it to a workflow
 * **Img2Img / Color Guide:** Connect **`image`** → `VAE Encode` → `KSampler` (`denoise` around `0.55–0.75`).
