@@ -9,17 +9,6 @@ const CANVAS_WAIT_TIMEOUT_MS = 5000;
 const NONE_PRESET_OPTION = "(none)";
 const MAX_FRAME_COUNT = 240;
 
-function formatSketchFilename(date, randomSuffix) {
-  const year = date.getUTCFullYear();
-  const month = date.getUTCMonth() + 1;
-  const day = date.getUTCDate();
-  return `${year}_${month}_${day}_${randomSuffix}`;
-}
-
-function buildPreviewUrl(baseUrl, sketchFilename) {
-  return `${baseUrl}?sketch=${encodeURIComponent(`${sketchFilename}.js`)}`;
-}
-
 function buildTempUploadFormData(file, subfolder, overwrite) {
   const body = new FormData();
   body.append("image", file);
@@ -91,12 +80,6 @@ async function uploadTempFile(file, overwrite) {
   return resp;
 }
 
-async function saveTempSketch(filename, srcCode) {
-  const blob = new Blob([srcCode], { type: "text/plain" });
-  const file = new File([blob], `${filename}.js`);
-  return uploadTempFile(file, true);
-}
-
 async function fetchPresetList() {
   const resp = await api.fetchApi("/p5js/sketches");
   if (!resp.ok) {
@@ -127,6 +110,27 @@ async function savePresetScript(name, script) {
   return resp.json();
 }
 
+function waitForIframeReady(iframe, timeoutMs) {
+  if (typeof iframe.contentWindow?.__p5RunSketch === "function") {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    const check = () => {
+      if (typeof iframe.contentWindow?.__p5RunSketch === "function") {
+        resolve();
+        return;
+      }
+      if (Date.now() - startTime >= timeoutMs) {
+        reject(new Error("p5.js preview frame failed to initialize within timeout."));
+        return;
+      }
+      setTimeout(check, CANVAS_POLL_INTERVAL_MS);
+    };
+    check();
+  });
+}
+
 function waitForCanvas(iframe, timeoutMs) {
   const startTime = Date.now();
   return new Promise((resolve, reject) => {
@@ -146,13 +150,9 @@ function waitForCanvas(iframe, timeoutMs) {
   });
 }
 
-async function runSketchInIframe(iframe, sketchFilename, srcCode) {
-  await saveTempSketch(sketchFilename, srcCode);
-  const loaded = new Promise((resolve) => {
-    iframe.addEventListener("load", () => resolve(), { once: true });
-  });
-  iframe.src = buildPreviewUrl(P5JS_PREVIEW_SRC, sketchFilename);
-  await loaded;
+async function runSketchInIframe(iframe, srcCode) {
+  await waitForIframeReady(iframe, CANVAS_WAIT_TIMEOUT_MS);
+  iframe.contentWindow.__p5RunSketch(srcCode);
   return waitForCanvas(iframe, CANVAS_WAIT_TIMEOUT_MS);
 }
 
@@ -168,8 +168,8 @@ function canvasToPngBlob(canvas) {
   });
 }
 
-async function captureFrameSequence(iframe, sketchFilename, scriptText, frameCount) {
-  const canvas = await runSketchInIframe(iframe, sketchFilename, scriptText);
+async function captureFrameSequence(iframe, scriptText, frameCount) {
+  const canvas = await runSketchInIframe(iframe, scriptText);
   const batchId = Date.now();
 
   const captureOne = async (frameIndex) => {
@@ -192,15 +192,14 @@ async function captureFrameSequence(iframe, sketchFilename, scriptText, frameCou
   return JSON.stringify(uploadedPaths);
 }
 
-async function captureAndUploadCanvas(iframe, sketchFilename, getScriptText, getFrameCount) {
+async function captureAndUploadCanvas(iframe, getScriptText, getFrameCount) {
   const frameCount = clampFrameCount(getFrameCount());
   if (frameCount > 1) {
-    return captureFrameSequence(iframe, sketchFilename, getScriptText(), frameCount);
+    return captureFrameSequence(iframe, getScriptText(), frameCount);
   }
 
   const existingCanvas = findSketchCanvas(iframe);
-  const canvas =
-    existingCanvas || (await runSketchInIframe(iframe, sketchFilename, getScriptText()));
+  const canvas = existingCanvas || (await runSketchInIframe(iframe, getScriptText()));
   const blob = await canvasToPngBlob(canvas);
   const imageFilename = `${Date.now()}.png`;
   const file = new File([blob], imageFilename, { type: "image/png" });
@@ -209,7 +208,6 @@ async function captureAndUploadCanvas(iframe, sketchFilename, getScriptText, get
 }
 
 function createP5jsWidget(node, inputName) {
-  const sketchFilename = formatSketchFilename(new Date(), Math.floor(Math.random() * 100000));
   const iframe = createPreviewIframe(P5JS_PREVIEW_SRC);
   const container = createPreviewContainer(iframe);
 
@@ -231,7 +229,7 @@ function createP5jsWidget(node, inputName) {
           if (scriptWidget) {
             scriptWidget.value = script;
           }
-          return runSketchInIframe(iframe, sketchFilename, script);
+          return runSketchInIframe(iframe, script);
         })
         .catch((err) => console.error("[comfyui-p5js-node]", err));
     },
@@ -268,7 +266,7 @@ function createP5jsWidget(node, inputName) {
   savePresetButton.serializeValue = () => undefined;
 
   const runButton = node.addWidget("button", "Run Sketch", "run_p5js_sketch", () => {
-    runSketchInIframe(iframe, sketchFilename, getScriptText()).catch((err) => {
+    runSketchInIframe(iframe, getScriptText()).catch((err) => {
       console.error("[comfyui-p5js-node]", err);
     });
   });
@@ -284,7 +282,7 @@ function createP5jsWidget(node, inputName) {
   ];
 
   domWidget.serializeValue = () =>
-    captureAndUploadCanvas(iframe, sketchFilename, getScriptText, getFrameCount);
+    captureAndUploadCanvas(iframe, getScriptText, getFrameCount);
 
   return domWidget;
 }

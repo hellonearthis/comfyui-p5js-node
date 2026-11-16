@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/p5.min.js" crossorigin=""></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/addons/p5.sound.min.js" crossorigin=""></script>
+  <script src="./p5.min.js"></script>
   <style>
     html, body {
       margin: 0;
@@ -38,10 +37,39 @@
 <script type="text/javascript">
 (function () {
   const errorBox = document.getElementById("p5-error");
-  window.addEventListener("error", (event) => {
+
+  function showError(message) {
     errorBox.style.display = "block";
-    errorBox.textContent = `Sketch Error: ${event.message || "Unknown error"}`;
+    errorBox.textContent = `Sketch Error: ${message}`;
+  }
+
+  function clearError() {
+    errorBox.style.display = "none";
+    errorBox.textContent = "";
+  }
+
+  window.addEventListener("error", (event) => {
+    showError(event.message || "Unknown error");
   });
+
+  window.__p5RunSketch = (srcCode) => {
+    clearError();
+    if (window.__p5Instance && typeof window.__p5Instance.remove === "function") {
+      window.__p5Instance.remove();
+      window.__p5Instance = null;
+    }
+    window.setup = undefined;
+    window.draw = undefined;
+    window.preload = undefined;
+
+    try {
+      window.eval(String(srcCode || ""));
+      window.__p5Instance = new window.p5();
+    } catch (err) {
+      showError(err && err.message ? err.message : String(err));
+      throw err;
+    }
+  };
 
   window.__p5StepFrame = () => {
     if (typeof window.noLoop === "function") {
@@ -51,23 +79,6 @@
       window.redraw();
     }
   };
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const sketchName = urlParams.get("sketch");
-
-  if (sketchName) {
-    const scriptTag = document.createElement("script");
-    scriptTag.type = "text/javascript";
-    scriptTag.async = false;
-    scriptTag.src =
-      "/view?filename=" +
-      encodeURIComponent(sketchName) +
-      "&type=temp&subfolder=p5js&t=" +
-      Date.now() +
-      "_" +
-      Math.random().toString(36).slice(2);
-    document.body.appendChild(scriptTag);
-  }
 })();
 </script>
 </body>
