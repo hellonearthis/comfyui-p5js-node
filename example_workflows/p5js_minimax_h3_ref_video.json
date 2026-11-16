@@ -922,6 +922,7 @@
       },
       "widgets_values": [
         "function setup() {\n  createCanvas(512, 512);\n}\n\nfunction draw() {\n  background(12, 16, 28);\n  noFill();\n  strokeWeight(4);\n  const t = frameCount * 0.14;\n  for (let i = 0; i < 10; i++) {\n    stroke(60 + i * 18, 190, 255 - i * 12);\n    beginShape();\n    for (let x = 0; x <= width; x += 16) {\n      const y = height / 2 + sin(x * 0.02 + t + i * 0.45) * (65 + i * 8);\n      vertex(x, y);\n    }\n    endShape();\n  }\n}",
+        "",
         48
       ],
       "widgets_values_named": {

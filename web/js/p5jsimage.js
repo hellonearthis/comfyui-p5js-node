@@ -233,7 +233,7 @@ function createP5jsWidget(node, inputName) {
         })
         .catch((err) => console.error("[comfyui-p5js-node]", err));
     },
-    { values: [NONE_PRESET_OPTION] }
+    { values: [NONE_PRESET_OPTION], serialize: false }
   );
   presetWidget.serializeValue = () => undefined;
 
@@ -243,33 +243,45 @@ function createP5jsWidget(node, inputName) {
     })
     .catch((err) => console.error("[comfyui-p5js-node]", err));
 
-  const savePresetButton = node.addWidget("button", "Save Preset", "save_p5js_preset", () => {
-    const defaultName =
-      presetWidget.value && presetWidget.value !== NONE_PRESET_OPTION
-        ? presetWidget.value
-        : "my_sketch.js";
-    const chosenName = window.prompt("Save p5.js preset as:", defaultName);
-    if (!chosenName) {
-      return;
-    }
-    savePresetScript(chosenName, getScriptText())
-      .then((result) => {
-        if (Array.isArray(result.sketches)) {
-          presetWidget.options.values = buildPresetOptions(result.sketches);
-        }
-        if (result.name) {
-          presetWidget.value = result.name;
-        }
-      })
-      .catch((err) => console.error("[comfyui-p5js-node]", err));
-  });
+  const savePresetButton = node.addWidget(
+    "button",
+    "Save Preset",
+    "save_p5js_preset",
+    () => {
+      const defaultName =
+        presetWidget.value && presetWidget.value !== NONE_PRESET_OPTION
+          ? presetWidget.value
+          : "my_sketch.js";
+      const chosenName = window.prompt("Save p5.js preset as:", defaultName);
+      if (!chosenName) {
+        return;
+      }
+      savePresetScript(chosenName, getScriptText())
+        .then((result) => {
+          if (Array.isArray(result.sketches)) {
+            presetWidget.options.values = buildPresetOptions(result.sketches);
+          }
+          if (result.name) {
+            presetWidget.value = result.name;
+          }
+        })
+        .catch((err) => console.error("[comfyui-p5js-node]", err));
+    },
+    { serialize: false }
+  );
   savePresetButton.serializeValue = () => undefined;
 
-  const runButton = node.addWidget("button", "Run Sketch", "run_p5js_sketch", () => {
-    runSketchInIframe(iframe, getScriptText(), getFrameCount()).catch((err) => {
-      console.error("[comfyui-p5js-node]", err);
-    });
-  });
+  const runButton = node.addWidget(
+    "button",
+    "Run Sketch",
+    "run_p5js_sketch",
+    () => {
+      runSketchInIframe(iframe, getScriptText(), getFrameCount()).catch((err) => {
+        console.error("[comfyui-p5js-node]", err);
+      });
+    },
+    { serialize: false }
+  );
   runButton.serializeValue = () => undefined;
 
   const domWidget = node.addDOMWidget(inputName, "P5JS", container, {
