@@ -1,29 +1,72 @@
 <!DOCTYPE HTML>
 <html lang="en">
 <head>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/p5.js" crossorigin=""></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/addons/p5.sound.min.js" crossorigin=""></script>    
+  <meta charset="utf-8" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/p5.min.js" crossorigin=""></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/addons/p5.sound.min.js" crossorigin=""></script>
   <style>
-    html, body {margin: 0;padding: 0;background:#222;}
-    canvas {display: block;}
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      font-family: monospace;
+      color: #f87171;
+    }
+    canvas {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    #p5-error {
+      display: none;
+      padding: 12px;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
   </style>
 </head>
 <body>
+<div id="p5-error"></div>
 <script type="text/javascript">
 (function () {
+  const errorBox = document.getElementById("p5-error");
+  window.addEventListener("error", (event) => {
+    errorBox.style.display = "block";
+    errorBox.textContent = `Sketch Error: ${event.message || "Unknown error"}`;
+  });
 
-  //get the sketch file name
-  var queryString = window.location.search;
-  var urlParams = new URLSearchParams(queryString);
-  var sketchName = urlParams.get('sketch');
+  window.__p5StepFrame = () => {
+    if (typeof window.noLoop === "function") {
+      window.noLoop();
+    }
+    if (typeof window.redraw === "function") {
+      window.redraw();
+    }
+  };
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const sketchName = urlParams.get("sketch");
 
   if (sketchName) {
-    var script_tag = document.createElement('script');
-    script_tag.type = 'text/javascript';
-    script_tag.async = true;
-    script_tag.src = '/view?filename=' + sketchName + '&type=temp&subfolder=p5js&rand=' + Math.random() + Date.now();
-    var s = document.getElementsByTagName('script')[0];
-    s.parentNode.insertBefore(script_tag, s);
+    const scriptTag = document.createElement("script");
+    scriptTag.type = "text/javascript";
+    scriptTag.async = false;
+    scriptTag.src =
+      "/view?filename=" +
+      encodeURIComponent(sketchName) +
+      "&type=temp&subfolder=p5js&t=" +
+      Date.now() +
+      "_" +
+      Math.random().toString(36).slice(2);
+    document.body.appendChild(scriptTag);
   }
 })();
 </script>
